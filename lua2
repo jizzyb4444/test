@@ -1,0 +1,308 @@
+-- VORTEX STYLE MENU Susano API-ga
+local menu = {
+    -- Menüü asukoht ja suurus
+    x = 300,
+    y = 150,
+    width = 400,
+    height = 400,
+    
+    -- Menüü üksused
+    items = {
+        {text = "PLAY", action = "play", icon = "▶"},
+        {text = "SETTINGS", action = "settings", icon = "⚙"},
+        {text = "LOADOUT", action = "loadout", icon = "🎒"},
+        {text = "STATISTICS", action = "stats", icon = "📊"},
+        {text = "EXIT", action = "exit", icon = "⏻"}
+    },
+    
+    -- Aktiivne valik
+    selected = 1,
+    
+    -- Värvid Nexus/Vortex stiilis
+    colors = {
+        background = {0.08, 0.08, 0.12, 0.95}, -- Tumepruun-sinine taust
+        item_bg = {0.15, 0.15, 0.2, 0.9}, -- Nupu taust
+        item_hover = {0.25, 0.25, 0.35, 0.95}, -- Hover efekt
+        item_active = {0.3, 0.4, 0.8, 0.95}, -- Aktiivne nupp (sinine)
+        text = {0.9, 0.9, 1, 1}, -- Valge-sinine tekst
+        text_hover = {1, 1, 1, 1}, -- Valge hoveril
+        accent = {0, 0.7, 1, 1}, -- Helesinine aktsent
+        accent2 = {0.8, 0.2, 1, 1} -- Lilla aktsent (Vortex stiilis)
+    },
+    
+    -- Animatsiooni muutujad
+    hover_anim = 0,
+    pulse_anim = 0,
+    bg_offset = 0
+}
+
+-- ABIFUNKTSIOONID
+function drawGradientRect(x, y, w, h, color1, color2, vertical)
+    -- Joonistab gradienti ristküliku (mitme joonega)
+    local steps = 20
+    for i = 0, steps do
+        local factor = i / steps
+        local r = color1[1] + (color2[1] - color1[1]) * factor
+        local g = color1[2] + (color2[2] - color1[2]) * factor
+        local b = color1[3] + (color2[3] - color1[3]) * factor
+        local a = color1[4] or 1
+        
+        if vertical then
+            -- Vertikaalne gradient
+            local segmentHeight = h / steps
+            Susano.DrawRect(x, y + i * segmentHeight, w, segmentHeight, r, g, b, a, 0)
+        else
+            -- Horisontaalne gradient
+            local segmentWidth = w / steps
+            Susano.DrawRect(x + i * segmentWidth, y, segmentWidth, h, r, g, b, a, 0)
+        end
+    end
+end
+
+function drawRoundedRect(x, y, w, h, radius, r, g, b, a)
+    -- Lihtsustatud ümardatud ristkülik (4 väikest ristkülikut ja 4 veerandringi)
+    
+    -- Keskosa
+    Susano.DrawRect(x + radius, y, w - 2 * radius, h, r, g, b, a, 0)
+    Susano.DrawRect(x, y + radius, w, h - 2 * radius, r, g, b, a, 0)
+    
+    -- Nurgad (lihtsustatud - väikesed ruudud)
+    -- Ülemine vasak
+    Susano.DrawRect(x, y, radius, radius, r, g, b, a, 0)
+    -- Ülemine parem
+    Susano.DrawRect(x + w - radius, y, radius, radius, r, g, b, a, 0)
+    -- Alumine vasak
+    Susano.DrawRect(x, y + h - radius, radius, radius, r, g, b, a, 0)
+    -- Alumine parem
+    Susano.DrawRect(x + w - radius, y + h - radius, radius, radius, r, g, b, a, 0)
+end
+
+function drawGlowEffect(x, y, w, h, color, intensity)
+    -- Glow efekt ümber elemendi
+    for i = 1, 3 do
+        local offset = i * 2
+        local alpha = (intensity or 0.3) * (1 - i/4)
+        Susano.DrawRect(x - offset, y - offset, w + offset*2, h + offset*2, 
+                       color[1], color[2], color[3], alpha, 0)
+    end
+end
+
+-- PÕHIFUNKTSIOONID
+function drawBackground()
+    -- Tumepruun-sinine gradient taust
+    drawGradientRect(0, 0, 800, 600, 
+        {0.05, 0.05, 0.08, 1}, 
+        {0.12, 0.1, 0.15, 1}, 
+        true)
+    
+    -- Liikuvad taustafiguurid (Vortex efekt)
+    menu.bg_offset = menu.bg_offset + 0.5
+    for i = 0, 15 do
+        local offset = (i * 40 + menu.bg_offset) % 800
+        Susano.DrawLine(offset, 0, offset, 600, 0.15, 0.15, 0.2, 0.1, 1)
+        Susano.DrawLine(0, offset, 800, offset, 0.15, 0.15, 0.2, 0.1, 1)
+    end
+    
+    -- Keskne ring efekt
+    for i = 1, 5 do
+        local radius = i * 40
+        Susano.DrawLine(400 - radius, 300, 400 + radius, 300, 
+                       0.2, 0.2, 0.3, 0.05, 1)
+        Susano.DrawLine(400, 300 - radius, 400, 300 + radius, 
+                       0.2, 0.2, 0.3, 0.05, 1)
+    end
+end
+
+function drawMenuBox()
+    -- Menüü peamine kast ümardatud nurkadega
+    local mx, my, mw, mh = menu.x, menu.y, menu.width, menu.height
+    
+    -- Glow efekt
+    drawGlowEffect(mx - 10, my - 10, mw + 20, mh + 20, menu.colors.accent, 0.2)
+    
+    -- Menüü taust
+    drawRoundedRect(mx, my, mw, mh, 15, unpack(menu.colors.background))
+    
+    -- Äärise gradient
+    Susano.DrawRect(mx, my, mw, 2, unpack(menu.colors.accent)) -- Ülemine ääris
+    Susano.DrawRect(mx, my + mh - 2, mw, 2, unpack(menu.colors.accent2)) -- Alumine ääris
+    
+    -- Pealkiri
+    Susano.DrawText(menu.x + menu.width/2, menu.y + 30, "VORTEX MENU", 28, 
+                    0.8, 0.8, 1, 1)
+    Susano.DrawText(menu.x + menu.width/2, menu.y + 60, "v2.1.4", 14, 
+                    0.5, 0.5, 0.7, 1)
+    
+    -- Jaotusjoon
+    Susano.DrawLine(menu.x + 50, menu.y + 85, menu.x + menu.width - 50, menu.y + 85,
+                    0.3, 0.3, 0.4, 0.5, 1)
+end
+
+function drawMenuItem(index, item)
+    local mx, my = menu.x, menu.y
+    local itemHeight = 55
+    local itemSpacing = 10
+    local startY = my + 110
+    local itemY = startY + (index - 1) * (itemHeight + itemSpacing)
+    
+    local isSelected = (index == menu.selected)
+    local isHover = false -- Saad lisada hiire tuvastuse
+    
+    -- Valiku taust
+    local bgColor = menu.colors.item_bg
+    local textColor = menu.colors.text
+    
+    if isSelected then
+        bgColor = menu.colors.item_active
+        textColor = menu.colors.text_hover
+        
+        -- Glow efekt valitud nupul
+        drawGlowEffect(mx + 30, itemY - 2, menu.width - 60, itemHeight + 4, 
+                      menu.colors.accent, 0.3)
+    end
+    
+    -- Nupu taust
+    drawRoundedRect(mx + 30, itemY, menu.width - 60, itemHeight, 8, unpack(bgColor))
+    
+    -- Ikoon
+    if item.icon then
+        Susano.DrawText(mx + 60, itemY + itemHeight/2, item.icon, 24, 
+                       unpack(textColor))
+    end
+    
+    -- Nupu tekst
+    local textWidth = Susano.GetTextWidth(item.text, 20)
+    Susano.DrawText(mx + 100, itemY + itemHeight/2, item.text, 20, 
+                   unpack(textColor))
+    
+    -- Paremal nool (valitud puhul)
+    if isSelected then
+        -- Animeeritud nool
+        local arrowX = mx + menu.width - 60
+        local pulse = math.sin(menu.pulse_anim * 3) * 3
+        
+        Susano.DrawLine(arrowX + pulse, itemY + itemHeight/2, 
+                       arrowX + 20 + pulse, itemY + itemHeight/2,
+                       unpack(menu.colors.accent))
+        Susano.DrawLine(arrowX + 15 + pulse, itemY + itemHeight/2 - 5,
+                       arrowX + 20 + pulse, itemY + itemHeight/2,
+                       unpack(menu.colors.accent))
+        Susano.DrawLine(arrowX + 15 + pulse, itemY + itemHeight/2 + 5,
+                       arrowX + 20 + pulse, itemY + itemHeight/2,
+                       unpack(menu.colors.accent))
+    end
+    
+    -- Hover indikaator (vasakul)
+    if isHover then
+        Susano.DrawRect(mx + 35, itemY + 10, 3, itemHeight - 20, 
+                       unpack(menu.colors.accent2))
+    end
+end
+
+function drawAllMenuItems()
+    for i, item in ipairs(menu.items) do
+        drawMenuItem(i, item)
+    end
+end
+
+function drawFooter()
+    -- Alumine inforiba
+    local footerY = menu.y + menu.height - 30
+    
+    Susano.DrawRect(menu.x, footerY, menu.width, 30, 0.1, 0.1, 0.15, 0.9, 0)
+    
+    -- Info tekst
+    local selectedItem = menu.items[menu.selected]
+    Susano.DrawText(menu.x + 20, footerY + 15, "SELECTED: " .. selectedItem.text, 14,
+                    0.6, 0.6, 0.8, 1)
+    
+    -- Hint
+    Susano.DrawText(menu.x + menu.width - 20, footerY + 15, "ENTER to confirm", 12,
+                    0.4, 0.4, 0.6, 1)
+    
+    -- Vasak-parem nooled
+    Susano.DrawLine(menu.x + 150, footerY + 8, menu.x + 145, footerY + 15,
+                    0.5, 0.5, 0.7, 1, 2)
+    Susano.DrawLine(menu.x + 150, footerY + 22, menu.x + 145, footerY + 15,
+                    0.5, 0.5, 0.7, 1, 2)
+    
+    Susano.DrawLine(menu.x + 250, footerY + 8, menu.x + 255, footerY + 15,
+                    0.5, 0.5, 0.7, 1, 2)
+    Susano.DrawLine(menu.x + 250, footerY + 22, menu.x + 255, footerY + 15,
+                    0.5, 0.5, 0.7, 1, 2)
+end
+
+-- PÕHILOOP
+function updateMenu()
+    -- Uuenda animatsioone
+    menu.hover_anim = menu.hover_anim + 0.05
+    menu.pulse_anim = menu.pulse_anim + 0.02
+end
+
+function drawMenu()
+    Susano.BeginFrame()
+    
+    -- Joonista taust
+    drawBackground()
+    
+    -- Joonista menüü kast
+    drawMenuBox()
+    
+    -- Joonista kõik menüü üksused
+    drawAllMenuItems()
+    
+    -- Joonista footer
+    drawFooter()
+    
+    Susano.SubmitFrame()
+end
+
+-- SISENDI TÖÖTLUS (näide - sa pead selle integreerima oma sisendisüsteemiga)
+function handleInput()
+    -- NÄIDE: Kui vajutad üles/noolega alla
+    -- if isKeyPressed("up") then
+    --     menu.selected = menu.selected - 1
+    --     if menu.selected < 1 then menu.selected = #menu.items end
+    -- end
+    -- if isKeyPressed("down") then
+    --     menu.selected = menu.selected + 1
+    --     if menu.selected > #menu.items then menu.selected = 1 end
+    -- end
+    -- if isKeyPressed("enter") then
+    --     executeMenuAction(menu.items[menu.selected].action)
+    -- end
+end
+
+function executeMenuAction(action)
+    print("Menu action: " .. action)
+    
+    if action == "play" then
+        -- Mängu alustamine
+    elseif action == "settings" then
+        -- Seadete menüü avamine
+    elseif action == "loadout" then
+        -- Loadout menüü
+    elseif action == "stats" then
+        -- Statistikad
+    elseif action == "exit" then
+        -- Väljumine
+    end
+end
+
+-- ALGATUSEKS
+function startMenu()
+    print("Vortex Menu started")
+    
+    -- Põhisilm
+    while true do
+        updateMenu()
+        handleInput()
+        drawMenu()
+        
+        -- Väike paus (sõltub sinu rakendusest)
+        -- Võib olla vaja Susano.Sleep() vms funktsiooni
+    end
+end
+
+-- KÄIVITA
+-- startMenu()
